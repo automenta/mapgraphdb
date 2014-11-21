@@ -18,8 +18,7 @@
  ******************************************************************************/
 package com.syncleus.grail.graph;
 
-import com.tinkerpop.frames.VertexFrame;
-import com.tinkerpop.frames.modules.typedgraph.*;
+import com.tinkerpop.blueprints.Vertex;
 
 /**
  * A node in a graph. All custom graph node types should inherit this interface. This is required to properly handle
@@ -29,6 +28,5 @@ import com.tinkerpop.frames.modules.typedgraph.*;
  *
  * @since 0.1
  */
-@TypeField("type")
-public interface Node extends VertexFrame {
+public interface Node extends Vertex {
 }

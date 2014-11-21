@@ -19,10 +19,9 @@
 package com.syncleus.grail.graph;
 
 import com.tinkerpop.blueprints.Direction;
-import com.tinkerpop.frames.modules.typedgraph.TypeValue;
 
-@TypeValue("SimpleSignalNode")
-public interface SimpleSignalNode extends SignalNode {
+public interface SimpleSignalNode extends /*MapVertex implements*/ SignalNode {
+    
     @TypedAdjacency(label="parent", direction= Direction.IN)
     <N extends SimpleSignalNode> Iterable<? extends N> getChildren(Class<? extends N> type);
 

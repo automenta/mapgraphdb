@@ -19,10 +19,10 @@
 package com.syncleus.grail.graph;
 
 import com.tinkerpop.blueprints.*;
-import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
+import com.tinkerpop.blueprints.impls.tg.MapGraph;
 import org.apache.commons.configuration.Configuration;
 
-public class MockTransactionalTinkerGraph extends TinkerGraph implements TransactionalGraph {
+public class MockTransactionalTinkerGraph extends MapGraph implements TransactionalGraph {
 
     public MockTransactionalTinkerGraph(final Configuration configuration) {
         super(configuration);

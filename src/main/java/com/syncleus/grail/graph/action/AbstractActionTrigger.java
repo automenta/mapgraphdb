@@ -18,6 +18,7 @@
  ******************************************************************************/
 package com.syncleus.grail.graph.action;
 
+import com.tinkerpop.blueprints.impls.tg.MapVertex;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -27,7 +28,8 @@ import java.util.*;
  *
  * @since 0.1
  */
-public abstract class AbstractActionTrigger implements ActionTrigger {
+public abstract class AbstractActionTrigger extends MapVertex implements ActionTrigger {
+    
     private static final Map<Class<?>, Map<String, Set<Method>>> ACTION_METHOD_CACHE = new HashMap<>();
 
     protected static final Map<String, Set<Method>> populateCache(final Class<?> parentClass) {

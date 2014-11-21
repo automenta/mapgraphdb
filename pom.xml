@@ -128,27 +128,16 @@
 
     <dependencies>
         <dependency>
+	<groupId>org.mapdb</groupId>
+	<artifactId>mapdb</artifactId>
+	<version>1.0.6</version>
+</dependency>
+
+
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.8.1</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.thinkaurelius.titan</groupId>
-            <artifactId>titan-core</artifactId>
-            <version>0.4.4</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.thinkaurelius.titan</groupId>
-            <artifactId>titan-berkeleyje</artifactId>
-            <version>0.4.4</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.thinkaurelius.titan</groupId>
-            <artifactId>titan-es</artifactId>
-            <version>0.4.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -156,15 +145,6 @@
             <artifactId>gremlin-java</artifactId>
             <version>2.6.0</version>
         </dependency>
-        <dependency>
-            <groupId>com.tinkerpop</groupId>
-            <artifactId>frames</artifactId>
-            <version>2.6.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jglue.totorom</groupId>
-            <artifactId>totorom-tinkerpop2</artifactId>
-            <version>0.5.3</version>
-        </dependency>
+        
     </dependencies>
 </project>
