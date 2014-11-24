@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.mapdb.DB;
 
 /**
  * //TODO combine the addInEdge and addOutEdge, & getInEdge and getOutEdge methods
@@ -29,7 +30,9 @@ public class MapVertex extends MapElement implements Vertex, Serializable {
     protected Map<String, Set<Edge>> outEdges = new LinkedHashMap<String, Set<Edge>>();
     protected Map<String, Set<Edge>> inEdges = new LinkedHashMap<String, Set<Edge>>();
 
-    
+    public MapVertex() {
+        super(null);
+    }
 
     
     public Iterable<Edge> getEdges(final Direction direction, final String... labels) {

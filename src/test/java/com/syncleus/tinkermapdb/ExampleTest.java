@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.syncleus.grail.graph;
+package com.syncleus.tinkermapdb;
 
 import com.tinkerpop.blueprints.impls.tg.MapGraph;
 import java.io.IOException;
@@ -15,7 +15,7 @@ import org.junit.Test;
  *
  * @author me
  */
-public class MapDBTest {
+public class ExampleTest {
 
     @Test public void testMapDBGraph() throws IOException {
         

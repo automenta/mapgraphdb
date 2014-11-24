@@ -7,6 +7,7 @@ import com.tinkerpop.blueprints.util.ExceptionFactory;
 import com.tinkerpop.blueprints.util.StringFactory;
 
 import java.io.Serializable;
+import org.mapdb.DB;
 
 
 /**
@@ -18,8 +19,8 @@ public class MapEdge extends MapElement implements Edge, Serializable {
     private final Vertex inVertex;
     private final Vertex outVertex;
 
-    protected MapEdge(final String id, final Vertex outVertex, final Vertex inVertex, final String label, final MapGraph graph) {
-        super();
+    protected MapEdge(final DB db, final String id, final Vertex outVertex, final Vertex inVertex, final String label, final MapGraph graph) {
+        super(db);
         init(id, graph);
         this.label = label;
         this.outVertex = outVertex;

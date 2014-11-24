@@ -28,7 +28,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import org.mapdb.Atomic;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -51,6 +50,7 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
 
     protected TinkerKeyIndex<MapVertex> vertexKeyIndex;
     protected TinkerKeyIndex<MapEdge> edgeKeyIndex;
+    private boolean persists = true;
 
     protected void init() {
         currentId = db.createAtomicLong("currentId", 0l);
@@ -63,7 +63,7 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
     }
     
     private static final Features FEATURES = new Features();
-    private static final Features PERSISTENT_FEATURES;
+    public static final Features PERSISTENT_FEATURES, PERSISTENT_FEATURES_TX;
 
     static {
         FEATURES.supportsDuplicateEdges = true;
@@ -81,7 +81,6 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
         FEATURES.supportsStringProperty = true;
 
         FEATURES.ignoresSuppliedIds = false;
-        FEATURES.isPersistent = false;
         FEATURES.isWrapper = false;
 
         FEATURES.supportsIndices = true;
@@ -90,45 +89,70 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
         FEATURES.supportsEdgeKeyIndex = true;
         FEATURES.supportsVertexIndex = true;
         FEATURES.supportsEdgeIndex = true;
-        FEATURES.supportsTransactions = false;
         FEATURES.supportsVertexIteration = true;
         FEATURES.supportsEdgeIteration = true;
         FEATURES.supportsEdgeRetrieval = true;
         FEATURES.supportsVertexProperties = true;
         FEATURES.supportsEdgeProperties = true;
+
+        FEATURES.isPersistent = false;
+        FEATURES.supportsTransactions = false;
         FEATURES.supportsThreadedTransactions = false;
         FEATURES.supportsThreadIsolatedTransactions = false;
 
         PERSISTENT_FEATURES = FEATURES.copyFeatures();
         PERSISTENT_FEATURES.isPersistent = true;
+        
+        PERSISTENT_FEATURES_TX = PERSISTENT_FEATURES.copyFeatures();
+        
+        PERSISTENT_FEATURES_TX.supportsTransactions = true;
+        PERSISTENT_FEATURES_TX.supportsThreadedTransactions = false;
+        PERSISTENT_FEATURES_TX.supportsThreadIsolatedTransactions = false;    
+    
     }
     
     public transient DB db;
 
-    public MapGraph() throws IOException {
-        this.db = DBMaker.newMemoryDirectDB().transactionDisable().make(); 
-        init();
+    /** new MapGraph in DirectByteBuffer outside of HEAP, so Garbage Collector is not affected */
+    public static MapGraph inOffHeapMemory() {
+        MapGraph m = new MapGraph(DBMaker.newMemoryDirectDB().transactionDisable());
+        m.persists = false;
+        return m;
     }
     
-    protected MapGraph(DBMaker dbmaker) {
+
+    
+    /** Creates new in-memory database which stores all data on heap without serialization. This mode should be very fast, but data will affect Garbage Collector the same way as traditional Java Collections.  */
+    public MapGraph() {
+        this(DBMaker.newHeapDB().transactionDisable());
+        this.persists = false;
+    }
+    
+    /** creates a new MapGraph given DBMaker builder */
+    public MapGraph(DBMaker dbmaker) {
         if (!isTransactional())
-            dbmaker.transactionDisable();
-        this.db = dbmaker.make();        
+            dbmaker.transactionDisable();        
+        this.db = dbmaker.make();    
+        
         init();
     }       
     
+    /** If directory is null, creates new MapGraph in temp file */
     public MapGraph(final String directory) throws IOException {
         DBMaker dbMaker;
-        if (directory == null) {
-            File f = File.createTempFile(MapGraph.class.getName(), UUID.randomUUID().toString());
-            dbMaker = DBMaker.newFileDB(f);
+        if (directory == null) {            
+            dbMaker = DBMaker.newTempFileDB();
         }
         else {
             dbMaker = DBMaker.newFileDB(new File(directory));
         }
+
+        dbMaker.asyncWriteEnable().mmapFileEnableIfSupported().cacheSize(32000000);
+
         if (!isTransactional())
             dbMaker.transactionDisable();        
         
+        persists = true;
         db = dbMaker.make();
         init();
     }
@@ -202,7 +226,7 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
         if (this.indices.containsKey(indexName))
             throw ExceptionFactory.indexAlreadyExists(indexName);
 
-        final MapIndex index = new MapIndex(indexName, indexClass);
+        final MapIndex index = new MapIndex(db, indexName, indexClass);
         this.indices.put(index.getIndexName(), index);
         commit();
         return index;
@@ -252,7 +276,7 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
         }
 
         C newVertex;
-        try {
+        try {            
             newVertex = klass.newInstance();
         } catch (Exception ex) {
             throw new RuntimeException("Unable to instantiate " + klass, ex);
@@ -337,7 +361,7 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
             }
         }
 
-        edge = new MapEdge(idString, outVertex, inVertex, label, this);
+        edge = new MapEdge(db, idString, outVertex, inVertex, label, this);
         this.edges.put(edge.getId().toString(), edge);
         final MapVertex out = (MapVertex) outVertex;
         final MapVertex in = (MapVertex) inVertex;
@@ -359,7 +383,7 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
                 edges.remove(edge);
         }
         if (null != inVertex && null != inVertex.inEdges) {
-            final Set<Edge> edges = inVertex.inEdges.get(edge.getLabel());
+            final Set<Edge> edges = inVertex.inEdges.get(edge.getLabel());            
             if (null != edges)
                 edges.remove(edge);
         }
@@ -388,17 +412,19 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
     }
 
     public void clear() {
+             
         this.vertices.clear();
         this.edges.clear();
         this.indices.clear();
         this.currentId.set(0);
-        this.vertexKeyIndex = new TinkerKeyIndex<MapVertex>(MapVertex.class);
-        this.edgeKeyIndex = new TinkerKeyIndex<MapEdge>(MapEdge.class);
+        this.vertexKeyIndex.clear();
+        this.edgeKeyIndex.clear();
         commit();
     }
 
     public void shutdown() {
-        db.close();
+        if (persists)
+            db.close();        
     }
 
     private String getNextId() {
@@ -414,7 +440,7 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
     }
 
     public Features getFeatures() {
-        return PERSISTENT_FEATURES;
+        return persists ? PERSISTENT_FEATURES : FEATURES;
     }
 
     public void stopTransaction(Conclusion cnclsn) {        
@@ -431,9 +457,15 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
         private final Set<String> indexedKeys;
         
 
+        
         public TinkerKeyIndex(final Class<T> indexClass) {
-            super(null, indexClass);
-            indexedKeys = db.createHashSet("keys_" + indexClass.getSimpleName()).make();
+            super(db, null, indexClass);
+             
+            indexedKeys = db.createHashSet("indexedKeys_" + indexClass.getSimpleName()).make();
+        }
+        
+        public void clear() {
+            indexedKeys.clear();
         }
 
         public void autoUpdate(final String key, final Object newValue, final Object oldValue, final T element) {
@@ -445,23 +477,19 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
         }
 
         public void autoRemove(final String key, final Object oldValue, final T element) {
-            if (this.indexedKeys.contains(key)) {
-                this.remove(key, oldValue, element);
-            }
+            this.remove(key, oldValue, element);            
         }
 
         public void createKeyIndex(final String key) {
-            if (this.indexedKeys.contains(key))
-                return;
+            if (this.indexedKeys.add(key)) {
 
-            this.indexedKeys.add(key);
-
-            if (MapVertex.class.equals(this.indexClass)) {
-                KeyIndexableGraphHelper.reIndexElements(MapGraph.this, MapGraph.this.getVertices(), new HashSet<String>(Arrays.asList(key)));
-            } else {
-                KeyIndexableGraphHelper.reIndexElements(MapGraph.this, MapGraph.this.getEdges(), new HashSet<String>(Arrays.asList(key)));
+                if (MapVertex.class.equals(this.indexClass)) {
+                    KeyIndexableGraphHelper.reIndexElements(MapGraph.this, MapGraph.this.getVertices(), new HashSet<String>(Arrays.asList(key)));
+                } else {
+                    KeyIndexableGraphHelper.reIndexElements(MapGraph.this, MapGraph.this.getEdges(), new HashSet<String>(Arrays.asList(key)));
+                }
+                commit();
             }
-            commit();
         }
 
         public void dropKeyIndex(final String key) {

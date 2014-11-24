@@ -5,6 +5,7 @@
  */
 package com.syncleus.tinkermapdb;
 
+import com.tinkerpop.blueprints.Features;
 import com.tinkerpop.blueprints.TransactionalGraph;
 import com.tinkerpop.blueprints.impls.tg.MapGraph;
 import java.io.IOException;
@@ -46,4 +47,7 @@ public class TxMapGraph extends MapGraph implements TransactionalGraph {
         db.rollback();
     }
     
+    public Features getFeatures() {
+        return PERSISTENT_FEATURES_TX;
+    }
 }

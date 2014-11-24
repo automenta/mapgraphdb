@@ -9,21 +9,28 @@ import com.tinkerpop.blueprints.util.WrappingCloseableIterable;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import org.mapdb.DB;
 
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
+ * 
+ * TODO add garbage collect to remove index keys with empty maps
  */
 class MapIndex<T extends Element> implements Index<T>, Serializable {
 
-    protected Map<String, Map<Object, Set<T>>> index = new HashMap<String, Map<Object, Set<T>>>();
+    protected Map<String, Map<Object, Set<T>>> index;
     protected final String indexName;
     protected final Class<T> indexClass;
+    private final String dbIndexName;
+    private final DB db;
 
-    public MapIndex(final String indexName, final Class<T> indexClass) {
+    public MapIndex(final DB db, final String indexName, final Class<T> indexClass) {
+        this.db = db;
+        this.dbIndexName = "index_" + (indexName!=null ? indexName : "") + "_" + indexClass.getSimpleName();
+        this.index = db.createHashMap(dbIndexName).make();
         this.indexName = indexName;
         this.indexClass = indexClass;
     }
@@ -39,28 +46,33 @@ class MapIndex<T extends Element> implements Index<T>, Serializable {
     public void put(final String key, final Object value, final T element) {
         Map<Object, Set<T>> keyMap = this.index.get(key);
         if (keyMap == null) {
-            keyMap = new HashMap<Object, Set<T>>();
+            keyMap = db.createHashMap(dbIndexName + "_" + key).make(); //new HashMap<Object, Set<T>>();
             this.index.put(key, keyMap);
         }
         Set<T> objects = keyMap.get(value);
         if (null == objects) {
-            objects = new HashSet<T>();
+            //objects = db.createHashSet(dbIndexName + "_" + key + "_" + value).make(); //new HashSet<T>();
+            objects = new LinkedHashSet();
+            
             keyMap.put(value, objects);
         }
         objects.add(element);
 
     }
+    
+    public final WrappingCloseableIterable<T> emptyClosableIterator = new WrappingCloseableIterable<T>((Iterable) Collections.emptyList());
 
     public CloseableIterable<T> get(final String key, final Object value) {
         final Map<Object, Set<T>> keyMap = this.index.get(key);
         if (null == keyMap) {
-            return new WrappingCloseableIterable<T>((Iterable) Collections.emptyList());
+            return emptyClosableIterator;
         } else {
             Set<T> set = keyMap.get(value);
             if (null == set)
-                return new WrappingCloseableIterable<T>((Iterable) Collections.emptyList());
-            else
+                return emptyClosableIterator;
+            else {                
                 return new WrappingCloseableIterable<T>(new ArrayList<T>(set));
+            }
         }
     }
 
@@ -85,18 +97,16 @@ class MapIndex<T extends Element> implements Index<T>, Serializable {
         final Map<Object, Set<T>> keyMap = this.index.get(key);
         if (null != keyMap) {
             Set<T> objects = keyMap.get(value);
-            if (null != objects) {
-                objects.remove(element);
-                if (objects.size() == 0) {
-                    keyMap.remove(value);
-                }
-            }
+            if (null != objects)
+                if (objects.remove(element))
+                    if (objects.isEmpty())
+                        keyMap.remove(value);                                
         }
     }
 
     public void removeElement(final T element) {
         if (this.indexClass.isAssignableFrom(element.getClass())) {
-            for (Map<Object, Set<T>> map : index.values()) {
+            for (Map<Object, Set<T>> map : index.values()) {                
                 for (Set<T> set : map.values()) {
                     set.remove(element);
                 }

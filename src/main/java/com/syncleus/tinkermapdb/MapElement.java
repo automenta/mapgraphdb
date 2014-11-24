@@ -7,30 +7,34 @@ import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.ElementHelper;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.mapdb.DB;
 
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
 abstract class MapElement implements Element, Serializable {
 
-    protected Map<String, Object> properties = new LinkedHashMap<String, Object>();
+    protected Map<String, Object> properties;
     protected String id;
     transient protected MapGraph graph;
+    //protected final DB db;
 
-    public MapElement() {
+    public MapElement(DB db) {
+        //this.db = db;
     }
     
     protected void init(final String id, final MapGraph graph) {
         this.graph = graph;
         this.id = id;
+        this.properties = new HashMap(); //db.createHashMap("element_" + id + "_prop").make(); 
     }
 
     public Set<String> getPropertyKeys() {
-        return new HashSet<String>(this.properties.keySet());
+        return new HashSet(this.properties.keySet());
     }
 
     public <T> T getProperty(final String key) {
@@ -69,9 +73,15 @@ abstract class MapElement implements Element, Serializable {
     }
 
     public void remove() {
-        if (this instanceof Vertex)
-            this.graph.removeVertex((Vertex) this);
-        else
+        if (this instanceof Vertex) {
+            this.graph.removeVertex((Vertex) this);            
+        }
+        else {
             this.graph.removeEdge((Edge) this);
+        }
+        
+        //helps GC
+        this.properties.clear();
+        this.properties = null;
     }
 }
