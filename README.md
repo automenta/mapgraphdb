@@ -1,9 +1,9 @@
+MapDB Database Implementation for Tinkerpop Blueprints Graph Database
+=====================================================================
 
 ![base](https://pbs.twimg.com/profile_images/2992585317/75aaa8e1895eb1ae54acfeb31cd47dea_400x400.png)
 ![base](https://raw.githubusercontent.com/tinkerpop/blueprints/master/doc/images/blueprints-logo.png)
 
-MapDB Database Implementation for Tinkerpop Blueprints
-======================================================
 
 Blueprints
 ==========
