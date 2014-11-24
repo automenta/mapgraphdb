@@ -58,6 +58,7 @@ class MapIndex<T extends Element> implements Index<T>, Serializable {
         }
         objects.add(element);
 
+        db.commit();
     }
     
     public final WrappingCloseableIterable<T> emptyClosableIterator = new WrappingCloseableIterable<T>((Iterable) Collections.emptyList());
@@ -98,9 +99,11 @@ class MapIndex<T extends Element> implements Index<T>, Serializable {
         if (null != keyMap) {
             Set<T> objects = keyMap.get(value);
             if (null != objects)
-                if (objects.remove(element))
+                if (objects.remove(element)) {
                     if (objects.isEmpty())
-                        keyMap.remove(value);                                
+                        keyMap.remove(value); 
+                    db.commit();
+                }
         }
     }
 

@@ -147,7 +147,7 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
             dbMaker = DBMaker.newFileDB(new File(directory));
         }
 
-        dbMaker.asyncWriteEnable().mmapFileEnableIfSupported().cacheSize(32000000);
+        dbMaker./*asyncWriteEnable().*/mmapFileEnableIfSupported().cacheSize(32000000);
 
         if (!isTransactional())
             dbMaker.transactionDisable();        
@@ -430,7 +430,8 @@ public class MapGraph implements IndexableGraph, KeyIndexableGraph, Serializable
     private String getNextId() {
         String idString;
         while (true) {
-            idString = this.currentId.toString();
+            //idString = Long.toUnsignedString(this.currentId.longValue(), 64);
+            idString = Long.toString(this.currentId.longValue());
             long i = this.currentId.incrementAndGet();
             if (null == this.vertices.get(idString) || null == this.edges.get(idString) || i == Long.MAX_VALUE)
                 break;
